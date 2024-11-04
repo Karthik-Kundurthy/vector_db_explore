@@ -61,7 +61,7 @@ struct HNSWNode {
 
 };
 
-// Manage the entire dataset: SIFT and GLOVE
+/// Manage the entire dataset: SIFT and GLOVE
 class DataSet {
     public:
         std::string name;
@@ -81,6 +81,98 @@ class DataSet {
 
 class HNSW {
     public:
+    
+    // m_l: normalization factor is an attribute
+
+    /// ALGORITHM 1
+    /// @param q: the query vector
+    /// @param m: the number of established connections
+    /// @param m_max: the maximum number of connectiosn for each element per layer
+    /// @param ef_construction: size of dynamic candidate list
+    /// update the HNSW graph
+    /// 
+    void insert(DataPoint q, uint64_t m, uint64_t m_max, size_t ef_construction) {
+        UNUSED(q);
+        UNUSED(m);
+        UNUSED(m_max);
+        UNUSED(ef_construction);
+
+
+
+    }
+
+    /// ALGORITHM 2
+    /// @param q: the query vector
+    /// @param ep: enter points ep
+    /// @param ef: number of nearest to q elements to return
+    /// @param l_c: layer number
+    /// @return ef closest neighbors to q
+    std::vector<HNSWNode*> search_layer(DataPoint q, std::vector<HNSW> ep, uint64_t ef, size_t l_c) {
+        UNUSED(q);
+        UNUSED(ep);
+        UNUSED(ef);
+        UNUSED(l_c);
+
+        return std::vector<HNSWNode*>();
+
+
+    }
+
+    /// ALGORITHM 3
+    /// @param q: base element
+    /// @param C:  candidate elements
+    /// @param M: number of neighbors to return
+    std::vector<HNSWNode*> select_neighbors_simple(DataPoint q, std::vector<HNSWNode> C, uint64_t M) {
+        UNUSED(q);
+        UNUSED(C);
+        UNUSED(M);
+
+
+        return std::vector<HNSWNode*>();
+    }
+
+    /// ALGORITHM 4
+    /// @param q query vector
+    /// @param C candidate elements
+    /// @param M: number of neighbors to return
+    /// @param extendCandidates whether or not to extend candidate list
+    /// @param keepPrunedConnections whether or not to add discarded elements
+    /// @param 
+    std::vector<HNSWNode*> select_neighbors_heuristic(DataPoint q, std::vector<HNSWNode> C, uint64_t M, size_t l_c, bool extendCandidates=false, bool keepPrunedConnections=false) {
+
+        UNUSED(q);
+        UNUSED(C);
+        UNUSED(M);
+        UNUSED(l_c);
+        UNUSED(extendCandidates);
+        UNUSED(keepPrunedConnections);
+
+
+        return std::vector<HNSWNode*>();
+
+    }
+
+    /// ALGORITHM 5
+    /// @param q: the query vector
+    /// @param k: the number of nearest neighbors to return
+    /// @param ef: size of dynamic candidate list
+    /// @return K nearest elements to query vector in the dynamic candidate list
+    ///
+    std::vector<HNSWNode*> knn_search(DataPoint q, uint64_t k, uint64_t ef) {
+        UNUSED(q);
+        UNUSED(k);
+        UNUSED(ef);
+
+        return std::vector<HNSWNode*>();
+    }   
+
+
+
+
+
+
+
+
 
 
 
