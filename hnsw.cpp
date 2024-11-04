@@ -1,5 +1,4 @@
 #include <iostream>
-#include <algorithm>
 #include <fstream>
 #include <chrono>
 #include <map>
@@ -9,11 +8,9 @@
 #include <string>
 #include <memory>
 #include <sstream>
-#include <limits>
 #include <thread>
 #include <queue>
 #include <optional>
-#include <random>
 #include <mutex>
 #include <shared_mutex>
 #include <cassert>
@@ -21,6 +18,33 @@
 #include <exception>
 #include <atomic>
 #include <set>
+#include <unordered_set>
+#include <cmath>
+#include <random>
+#include <limits>
+#include <algorithm>
+
+
+#define UNUSED(p)  ((void)(p))
 
 
 
+// Represent vector field(s) and unstructured metadata
+struct DataPoint {
+    std::string id;
+    std::vector<float> vector_field;
+
+    DataPoint(std::string &id, std::vector<float> vec) : id(id), vector_field(vec) {}
+
+    DataPoint(const std::string &id, size_t dim) : id(id), vector_field(dim, 0.0f) {}
+
+};
+
+
+int main(int argc, char* argv[]) {
+    UNUSED(argc);
+    UNUSED(argv);
+
+    return 0;
+
+}
