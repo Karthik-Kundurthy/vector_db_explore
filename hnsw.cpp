@@ -152,8 +152,26 @@ class HNSW {
             UNUSED(ef);
             UNUSED(l_c);
 
-            return std::vector<HNSWNode*>();
+            using NodeDistPair = std::pair<float, HNSW*>;
+            auto compare = [](const NodeDistPair& a, const NodeDistPair& b) {return a.first > b.first;};
+            // usng decltype because we need comparision type to match lambda comparision
+            std::priority_queue<NodeDistPair, std::vector<NodeDistPair>, decltype(compare)> candidates(compare);
 
+            std::vector<HNSW*> W;
+            while(W.size() < ef && !candidates.empty()) {
+                auto [distance, node] = candidates.top();
+                candidates.pop();
+                W.push_back(node);
+
+                for (auto *neighbor :node-> connections[l_c]) {
+                    candidate_dist = distance(q.vector_field, neighbor -> data_point.vector_field);
+                    if (W.size() < ef || candidate_dist < dist) {
+                        candidates.push({d,neighbor});
+                    }
+                }
+            }
+
+            return W;
 
         }
 
