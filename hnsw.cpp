@@ -88,6 +88,16 @@ class HNSW {
     
         HNSW(float m_l) : m_l(m_l) {}
 
+        float distance(const std::vector<float>& x,const std::vector<float>& y) {
+            UNUSED(x);
+            UNUSED(y);
+
+            float dist = 0.0f;
+
+            dist=std::sqrt(dist);
+            return dist;
+        }
+
         /// ALGORITHM 1
         /// @param q: the query vector
         /// @param m: the number of established connections
@@ -152,21 +162,21 @@ class HNSW {
             UNUSED(ef);
             UNUSED(l_c);
 
-            using NodeDistPair = std::pair<float, HNSW*>;
+            using NodeDistPair = std::pair<float, HNSWNode*>;
             auto compare = [](const NodeDistPair& a, const NodeDistPair& b) {return a.first > b.first;};
             // usng decltype because we need comparision type to match lambda comparision
             std::priority_queue<NodeDistPair, std::vector<NodeDistPair>, decltype(compare)> candidates(compare);
 
-            std::vector<HNSW*> W;
+            std::vector<HNSWNode*> W;
             while(W.size() < ef && !candidates.empty()) {
-                auto [distance, node] = candidates.top();
+                auto [dis, node] = candidates.top();
                 candidates.pop();
                 W.push_back(node);
 
                 for (auto *neighbor :node-> connections[l_c]) {
-                    candidate_dist = distance(q.vector_field, neighbor -> data_point.vector_field);
-                    if (W.size() < ef || candidate_dist < dist) {
-                        candidates.push({d,neighbor});
+                    float candidate_dist = distance(q.vector_field, neighbor -> data_point.vector_field);
+                    if (W.size() < ef || candidate_dist < dis) {
+                        candidates.push({candidate_dist,neighbor});
                     }
                 }
             }
@@ -184,8 +194,16 @@ class HNSW {
             UNUSED(C);
             UNUSED(M);
 
-            // default value
-            return std::vector<HNSWNode*>();
+            // sorting using lambda function, referred to code in slides
+            std::sort(C.begin(), C.end(), [&](HNSWNode* a, HNSWNode* b) {
+
+                return distance(q.vector_field, a->data_point.vector_field) < distance(q.vector_field, b->data_point.vector_field);
+
+            });
+
+            C.resize(M);
+
+            return C;
         }
 
         /// ALGORITHM 4
@@ -234,6 +252,8 @@ class HNSW {
             return W[0];
 
         }
+
+        
 };
 
 
