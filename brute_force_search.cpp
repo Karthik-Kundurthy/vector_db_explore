@@ -192,6 +192,9 @@ H5::DataSet loadDataset(std::string dataset_split = "train") {
     return dataset;
 }
 
+// defaults
+uint64_t default_k = 3;
+const uint64_t VALIDATION_SIZE = 10000;
 
 int main(int argc, char* argv[]) {
     UNUSED(argc);
@@ -224,9 +227,12 @@ int main(int argc, char* argv[]) {
     * Time with std::chrono, lecture 3 slides
     */
 
-    auto start = std::chrono::high_resolution_clock::now();
+    
 
     NaiveIndex* index = new NaiveIndex();
+
+
+    auto start = std::chrono::high_resolution_clock::now();
     std::ifstream train_file("train.csv");
 
     
@@ -268,10 +274,10 @@ int main(int argc, char* argv[]) {
     }
 
     output_csv << timestamp  << ",insert" << ",all," << elapsed.count() << ",N/A" << "\r\n";
-    output_csv.flush();
-    output_csv.close();
 
 
+
+    std::cout << "FINISHED INSERT ALL" << std::endl;
 
     /*
     * Perform Brute Force Search
@@ -279,8 +285,38 @@ int main(int argc, char* argv[]) {
     * once again timing with std::chrono 
     */
 
-    
+    start = std::chrono::high_resolution_clock::now();
+    std::ifstream test_file("test.csv");
 
+    // Mapping csv pos to the results, for later analysis
+    std::unordered_map<uint64_t, std::vector<std::pair<DataPoint*, float>>> search_results;
+
+    ctr = 0;
+
+    while(std::getline(test_file,line)) {
+        std::vector<float> query_vec;
+        std::stringstream ss(line);
+        std::string value;
+
+        while (std::getline(ss,value,',')) {
+            query_vec.push_back(std::stof(value));
+        }
+
+        std::cout << "PERFORMING SEARCH FOR THE " << ctr << " QUERY" << std::endl;
+        search_results[ctr] = index -> searchKClosest(query_vec,default_k);
+        ctr++;
+
+    }
+
+    test_file.close();
+
+    end = std::chrono::high_resolution_clock::now();
+    elapsed = end - start;
+    timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+
+    // validate the results using the neighbors and distance files
+    
 
 
 
