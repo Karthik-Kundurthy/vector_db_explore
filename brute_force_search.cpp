@@ -152,6 +152,7 @@ int main(int argc, char* argv[]) {
     UNUSED(argc);
     UNUSED(argv);
 
+    // Will be set dynamically in the future to select SIFT benchmarks
     std::string glove_file = "glove-25-angular.hdf5";
     
     // Listing the different datasets that could be used
@@ -173,16 +174,45 @@ int main(int argc, char* argv[]) {
 
 
 
+    /** Load Train Points as a flat array of Data Points */
+    std::vector<DataPoint*> test_points;
+    UNUSED(test_points);
+    std::ifstream file("tr.csv");
+
+    size_t ctr = 0;
+    std::string line;
+    
+    while(std::getline(file,line)) {
+        std::vector<float> row;
+        std::stringstream ss(line);
+        std::string value;
+
+        while (std::getline(ss,value,',')) {
+            row.push_back(std::stof(value));
+        }
 
 
+        DataPoint* point = new DataPoint(ctr,row);
+        test_points.push_back(point);
 
-
-
+        ++ctr;
+    }
 
     
 
+    file.close();
 
-    
+
+    // verifying
+    for (DataPoint* point : test_points) {
+        std::vector<float> row = point -> vector;
+        std::cout << "ID: " << point -> id << std::endl;
+        for (float ele : row) {
+            std::cout << ele << ", ";
+        }
+        std::cout << std::endl;
+        std::cout << std::endl;
+    }
 
 
 
