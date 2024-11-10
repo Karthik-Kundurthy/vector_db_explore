@@ -102,7 +102,7 @@ class NaiveIndex {
             }
 
 
-            return std::vector<std::pair<DataPoint*, float>>();
+            return ret;
 
 
         }
@@ -297,7 +297,7 @@ int main(int argc, char* argv[]) {
 
     ctr = 0;
 
-    while(std::getline(test_file,line)) {
+    while(std::getline(test_file,line) && ctr <= 10000) {
         std::vector<float> query_vec;
         std::stringstream ss(line);
         std::string value;
@@ -308,11 +308,25 @@ int main(int argc, char* argv[]) {
 
         std::cout << "PERFORMING SEARCH FOR THE " << ctr << " QUERY" << std::endl;
         search_results[ctr] = index -> searchKClosest(query_vec,default_k);
+
+        std::cout << "pairs" << std::endl;
+        for (std::pair<DataPoint*, float> pair : search_results[ctr]) {
+            std::cout  << pair.first -> id << " " << pair.second << ", ";
+        }
+
+        std::cout << std::endl;
+
+        std::cout << "___________________________________" << std::endl;
+        
+
         ctr++;
 
     }
 
     test_file.close();
+
+
+    
 
     end = std::chrono::high_resolution_clock::now();
     elapsed = end - start;
@@ -322,8 +336,8 @@ int main(int argc, char* argv[]) {
 
     // validate the results using the neighbors and distance files
 
-    uint64_t total_size = default_k * VALIDATION_SIZE;
-    uint64_t total_count = 0;
+    uint64_t total_size = default_k * VALIDATION_SIZE * 1.0f;
+    uint64_t total_count = 0.0f;
 
     std::ifstream neighbor_file("neighbors.csv");
     std::ifstream distances_file("distances.csv");
@@ -341,11 +355,23 @@ int main(int argc, char* argv[]) {
 
 
         // performing comparision here 
-
         std::vector<std::pair<DataPoint*, float>> output = search_results[ctr];
 
+        
+
+
+        
+
         for (size_t i = 0; i < default_k; i++) {
+            std::cout << "NEIGHBORS VEC" << std::endl;
+
+            for (size_t j=0; j < neighbors_vec.size();j++) {
+                std::cout << neighbors_vec[j] <<" ";
+            }
+            std::cout << std::endl;
+
             if  (output[i].first -> id == neighbors_vec[i]) {
+                std::cout << "Found a match!" << std::endl;
                 total_count++;
             }
         }
@@ -355,11 +381,15 @@ int main(int argc, char* argv[]) {
 
     }
 
+    std::cout << "TOTAL COUNT: " << total_count << " TOTAL SIZE: " << total_size << std::endl;
 
+
+    
     //** Writing the results */
     output_csv << timestamp  << ",search" << ",all," << elapsed.count() << "," << total_count/total_size << "\r\n";
     output_csv.flush();
     output_csv.close();
+    
     
     
 
