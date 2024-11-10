@@ -314,15 +314,55 @@ int main(int argc, char* argv[]) {
     elapsed = end - start;
     timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
+    
 
     // validate the results using the neighbors and distance files
+
+    uint64_t total_size = default_k * VALIDATION_SIZE;
+    uint64_t total_count = 0;
+
+    std::ifstream neighbor_file("neighbors.csv");
+    std::ifstream distances_file("distances.csv");
+
+    ctr = 0;
+
+    while(std::getline(neighbor_file,line)) {
+        std::vector<float> neighbors_vec;
+        std::stringstream ss(line);
+        std::string value;
+
+        while (std::getline(ss,value,',')) {
+            neighbors_vec.push_back(std::stoi(value));
+        }
+
+
+        // performing comparision here 
+
+        std::vector<std::pair<DataPoint*, float>> output = search_results[ctr];
+
+        for (size_t i = 0; i < default_k; i++) {
+            if  (output[i].first -> id == neighbors_vec[i]) {
+                total_count++;
+            }
+        }
+
+
+        ctr++;
+
+    }
+
+
+    //** Writing the results */
+    output_csv << timestamp  << ",search" << ",all," << elapsed.count() << "," << total_count/total_size << "\r\n";
+    output_csv.flush();
+    output_csv.close();
+    
+    
+
     
 
 
-
-
-
-    /** Uncomment to verify all elements are inserted */
+    /** Uncomment to verify elements are inserted */
 
     // for (DataPoint* point : test_points) {
     //     std::vector<float> row = point -> vector;
