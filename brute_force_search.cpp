@@ -144,9 +144,6 @@ H5::DataSet loadDataset(std::string dataset_split = "train") {
     file.close();
 
     return dataset;
-
-
-
 }
 
 
@@ -186,7 +183,7 @@ int main(int argc, char* argv[]) {
 
     std::vector<DataPoint*> test_points;
     UNUSED(test_points);
-    std::ifstream file("tr.csv");
+    std::ifstream file("train.csv");
 
     
     size_t ctr = 0;
@@ -215,7 +212,6 @@ int main(int argc, char* argv[]) {
 
     /// Getting current timestamp from stack overflow answer: https://stackoverflow.com/questions/6012663/get-unix-timestamp-with-c
     int64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    UNUSED(timestamp);
 
     
     //** Writing the results */
@@ -224,11 +220,23 @@ int main(int argc, char* argv[]) {
     std::ofstream output_csv(csv_name, std::ios::app);
 
     if (!csv_created) {
-        output_csv << "timestamp,id,time\n";
+        output_csv << "timestamp,operation,id,time,accuracy\r\n";
     }
 
-    output_csv << timestamp  << ",all," << elapsed.count();
+    output_csv << timestamp  << ",insert" << ",all," << elapsed.count() << ",N/A" << "\r\n";
+    output_csv.flush();
+    output_csv.close();
 
+    
+
+
+    /*
+    * Perform Brute Force Search
+    * using min heap to store closest DataPoints
+    * once again timing with std::chrono 
+    */
+
+    
 
 
 
