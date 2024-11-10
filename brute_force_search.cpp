@@ -69,22 +69,10 @@ void listDatasets(H5::H5File &file) {
 
 
 // Reference: Loading Hdf5 dataset into C++ vector - https://stackoverflow.com/questions/25568446/loading-data-from-hdf5-to-vector-in-c
-int main(int argc, char* argv[]) {
-    UNUSED(argc);
-    UNUSED(argv);
-
-
-
+H5::DataSet loadDataset(std::string dataset_split = "train") {
     // will set this parameter dynamically in future iterations
-    const std::string glove_file = "glove-25-angular.hdf5";
     
-    // Listing the different datasets that could be used
-    H5::H5File root_explore(glove_file, H5F_ACC_RDONLY);
-    listDatasets(root_explore);
-    root_explore.close();
-
-
-    const std::string dataset_split = "train";
+    std::string glove_file = "glove-25-angular.hdf5";
 
     
 
@@ -98,7 +86,11 @@ int main(int argc, char* argv[]) {
     hsize_t dims[2];
     int ndims = dataspace.getSimpleExtentDims(dims, NULL);
     UNUSED(ndims);
+
+    // Get dataset size
+    std::cout << dataset_split << std::endl;
     std::cout << "DATSET DIMENSIONS: " << dims[0] << " x " << dims[1] << std::endl;
+    std::cout << "___________________________________" << std::endl;
 
 
     // rather than loading the entire dataset into the buffer in one go, we read a certain number of rows per chunk
@@ -106,6 +98,10 @@ int main(int argc, char* argv[]) {
     hsize_t num_chunks = (dims[0] + chunk_size - 1) / chunk_size;
 
     std::vector<float> single_chunk_buffer(chunk_size * dims[1]);
+
+
+    /// Dump chunk to CSV file
+    std::ofstream csvf(dataset_split + ".csv");
 
     for (hsize_t i = 0; i < num_chunks; i++) {
         hsize_t offset[2] = {i * chunk_size, 0};
@@ -115,7 +111,66 @@ int main(int argc, char* argv[]) {
         // Defining memory dataspace matches the size of the chunk
         H5::DataSpace memspace(2, count);
         dataset.read(single_chunk_buffer.data(), H5::PredType::NATIVE_FLOAT, memspace, dataspace);
+
+
+        
+
+
+        for (hsize_t r=0; r < count[0]; r++) {
+            for (hsize_t c=0; c < count[1]; c++) {
+                csvf << single_chunk_buffer[r * dims[1] + c];
+                if (c < count[1] - 1) {
+                    csvf <<",";
+                }
+            }
+            csvf << std::endl;
+        }
+
     }
+
+
+    csvf.close();
+    file.close();
+
+    return dataset;
+
+
+
+}
+
+
+int main(int argc, char* argv[]) {
+    UNUSED(argc);
+    UNUSED(argv);
+
+    std::string glove_file = "glove-25-angular.hdf5";
+    
+    // Listing the different datasets that could be used
+    H5::H5File root_explore(glove_file, H5F_ACC_RDONLY);
+    listDatasets(root_explore);
+    root_explore.close();
+    std::cout << "________________________________________" << std::endl;
+
+
+    /** Data to insert */
+    H5::DataSet train_data = loadDataset("train");
+
+
+    /** Validation points and ground truth */
+    H5::DataSet test_data = loadDataset("test"); 
+    H5::DataSet neighbors = loadDataset("neighbors"); 
+    H5::DataSet distances = loadDataset("distances"); 
+
+
+
+
+
+
+
+
+
+
+    
 
 
     
