@@ -51,16 +51,20 @@ class NaiveIndex {
             UNUSED(v2);
 
             float dot_product = 0.0;
-            float v1_normalize = 0.0;
-            float v2_normalize = 0.0;
+            float v1_normalize = 0.0f;
+            float v2_normalize = 0.0f;
 
             for (uint64_t i = 0; i < v1.size(); i++) {
                 dot_product += v1[i] * v2[i];
-                v1_normalize= v1[i] * v1[i];
-                v2_normalize= v2[i] * v2[i];
+                v1_normalize += v1[i] * v1[i];
+                v2_normalize += v2[i] * v2[i];
             }
 
-            return 1.0 - (dot_product /(sqrt(v1_normalize) * sqrt(v2_normalize)));
+            v1_normalize = std::sqrt(v1_normalize);
+            v2_normalize = std::sqrt(v2_normalize);
+
+            // needed to use radians and normalize value because my values were negative otherwise
+            return std::acos((dot_product / (v1_normalize * v2_normalize))) / M_PI;
 
         }
         /*
