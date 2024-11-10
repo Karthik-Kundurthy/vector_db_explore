@@ -23,13 +23,22 @@
 #include <random>
 #include <limits>
 #include <algorithm>
+#include <sstream>
 #include "H5Cpp.h"
 
 
 #define UNUSED(p)  ((void)(p))
 
 
+struct DataPoint {
+    public:
+        int id;
+        std::vector<float> vector;
 
+        DataPoint(int id, std::vector<float> vector) : id(id), vector(vector) {}
+    
+
+};
 
 float angular_distance(const std::vector<float> &v1, const std::vector<float> &v2) {
     UNUSED(v1);
