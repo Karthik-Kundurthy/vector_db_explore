@@ -38,27 +38,73 @@ struct DataPoint {
         std::vector<float> vector;
 
         DataPoint(int id, std::vector<float> vector) : id(id), vector(vector) {}
-    
-
 };
 
-float angular_distance(const std::vector<float> &v1, const std::vector<float> &v2) {
-    UNUSED(v1);
-    UNUSED(v2);
+class NaiveIndex {
+    public:
+        std::vector<DataPoint*> train_points;
+        NaiveIndex() {
 
-    float dot_product = 0.0;
-    float v1_normalize = 0.0;
-    float v2_normalize = 0.0;
+        }
+        float angular_distance(const std::vector<float> &v1, const std::vector<float> &v2) {
+            UNUSED(v1);
+            UNUSED(v2);
 
-    for (uint64_t i = 0; i < v1.size(); i++) {
-        dot_product += v1[i] * v2[i];
-        v1_normalize= v1[i] * v1[i];
-        v2_normalize= v2[i] * v2[i];
-    }
+            float dot_product = 0.0;
+            float v1_normalize = 0.0;
+            float v2_normalize = 0.0;
 
-    return 1.0 - (dot_product /(sqrt(v1_normalize) * sqrt(v2_normalize)));
+            for (uint64_t i = 0; i < v1.size(); i++) {
+                dot_product += v1[i] * v2[i];
+                v1_normalize= v1[i] * v1[i];
+                v2_normalize= v2[i] * v2[i];
+            }
 
-}
+            return 1.0 - (dot_product /(sqrt(v1_normalize) * sqrt(v2_normalize)));
+
+        }
+        /*
+        * Use a priority queue to get the k closest datapoint to a given query point 
+        * gradually increase k and see how the performance is, start with k = 3
+        * https://stackoverflow.com/questions/71317967/building-a-priority-queue-of-pairs
+        */
+        std::vector<std::pair<DataPoint*, float>> searchKClosest(std::vector<float> query_vec, uint64_t k) {
+            UNUSED(query_vec);
+            UNUSED(k);
+
+            // creating the PQ
+            // Slide 16 of https://faculty.cc.gatech.edu/~jarulraj/courses/4420-f24/slides/14-bplus-trees.pdf
+            auto comp = [](const std::pair<DataPoint*, float>& a, const std::pair<DataPoint*, float>& b) {
+                return a.second > b.second;
+            };
+
+
+            std::priority_queue<std::pair<DataPoint*, float>, std::vector<std::pair<DataPoint*, float>>, decltype(comp)> priority_queue(comp);
+
+
+            // iterating through all points and store Pairs of DataPoint,distance
+            for (DataPoint *point : train_points) {
+                float distance = angular_distance(point -> vector, query_vec);
+                priority_queue.push(std::pair(point, distance));
+            
+            }
+
+            std::vector<std::pair<DataPoint*, float>> ret;
+
+            for (size_t i = 0; i < k; i++) {
+                ret.push_back(priority_queue.top());
+                priority_queue.pop();
+
+            }
+
+
+            return std::vector<std::pair<DataPoint*, float>>();
+
+
+        }
+};
+
+
 
 void listDatasets(H5::H5File &file) {
     std::string groupName = "/";
@@ -178,18 +224,16 @@ int main(int argc, char* argv[]) {
     * Time with std::chrono, lecture 3 slides
     */
 
-
     auto start = std::chrono::high_resolution_clock::now();
 
-    std::vector<DataPoint*> test_points;
-    UNUSED(test_points);
-    std::ifstream file("train.csv");
+    NaiveIndex* index = new NaiveIndex();
+    std::ifstream train_file("train.csv");
 
     
     size_t ctr = 0;
     std::string line;
     
-    while(std::getline(file,line)) {
+    while(std::getline(train_file,line)) {
         std::vector<float> row;
         std::stringstream ss(line);
         std::string value;
@@ -200,12 +244,12 @@ int main(int argc, char* argv[]) {
 
 
         DataPoint* point = new DataPoint(ctr,row);
-        test_points.push_back(point);
+        (index -> train_points).push_back(point);
 
         ++ctr;
     }
 
-    file.close();
+    train_file.close();
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
@@ -227,7 +271,6 @@ int main(int argc, char* argv[]) {
     output_csv.flush();
     output_csv.close();
 
-    
 
 
     /*
