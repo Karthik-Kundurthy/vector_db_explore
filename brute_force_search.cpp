@@ -24,6 +24,8 @@
 #include <limits>
 #include <algorithm>
 #include <sstream>
+#include <chrono>
+#include <filesystem>
 #include "H5Cpp.h"
 
 
@@ -174,11 +176,19 @@ int main(int argc, char* argv[]) {
 
 
 
-    /** Load Train Points as a flat array of Data Points */
+    /*
+    * Load Train Points as a flat array of Data Points 
+    * Time with std::chrono, lecture 3 slides
+    */
+
+
+    auto start = std::chrono::high_resolution_clock::now();
+
     std::vector<DataPoint*> test_points;
     UNUSED(test_points);
     std::ifstream file("tr.csv");
 
+    
     size_t ctr = 0;
     std::string line;
     
@@ -198,21 +208,44 @@ int main(int argc, char* argv[]) {
         ++ctr;
     }
 
-    
-
     file.close();
 
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
 
-    // verifying
-    for (DataPoint* point : test_points) {
-        std::vector<float> row = point -> vector;
-        std::cout << "ID: " << point -> id << std::endl;
-        for (float ele : row) {
-            std::cout << ele << ", ";
-        }
-        std::cout << std::endl;
-        std::cout << std::endl;
+    /// Getting current timestamp from stack overflow answer: https://stackoverflow.com/questions/6012663/get-unix-timestamp-with-c
+    int64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    UNUSED(timestamp);
+
+    
+    //** Writing the results */
+    std::string csv_name= "baseline_benchmark.csv";
+    bool csv_created = std::filesystem::exists(csv_name); // https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exists-using-standard-c-c11-14-17-c
+    std::ofstream output_csv(csv_name, std::ios::app);
+
+    if (!csv_created) {
+        output_csv << "timestamp,id,time\n";
     }
+
+    output_csv << timestamp  << ",all," << elapsed.count();
+
+
+
+
+
+
+
+    /** Uncomment to verify all elements are inserted */
+
+    // for (DataPoint* point : test_points) {
+    //     std::vector<float> row = point -> vector;
+    //     std::cout << "ID: " << point -> id << std::endl;
+    //     for (float ele : row) {
+    //         std::cout << ele << ", ";
+    //     }
+    //     std::cout << std::endl;
+    //     std::cout << std::endl;
+    // }
 
 
 
