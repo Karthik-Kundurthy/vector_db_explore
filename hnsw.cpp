@@ -31,56 +31,51 @@
 
 
 
+/*
+ * Scratch Pad: Implementation level details
+ * Just implemnting the paper pseudocode directly
+ * Pull dataset loading modules from brute_force_search.cpp
+ * HNSWIndex contains the entry node and max level as well as insert, search and neighbor search functionality
+ * DataPoint object representing a vector in euclidean space
+ * HNSWNode: encapsulates the level that it is currently, pointer to the DataPoint, lateral connections and downward connection
+ * Multiple level HNSW have pointer to same DataPoint object
+ * Should I have a single unique pointer to the DataPoint at the top level and keep moving ownership as I move downwards and reset ownership when getting bottom?
+ * Future design: serialization and deserialization can be managed by allocating page for every vector and overflow pages if needed and a metadata pg
+ * Reusing BufferManger from BuzzDB
+*/
+
 
 
 
 // Represent vector field(s) and unstructured metadata
 struct DataPoint {
-    std::string id;
-    std::vector<float> vector_field;
+    public:
+        int id;
+        std::vector<float> vector;
 
-    DataPoint(std::string &id, std::vector<float> vec) : id(id), vector_field(vec) {}
-
-    DataPoint(const std::string &id, size_t dim) : id(id), vector_field(dim, 0.0f) {}
-
+        DataPoint(int id, std::vector<float> vector) : id(id), vector(vector) {}
 };
 
 struct HNSWNode {
-    DataPoint data_point;
-    int max_level;
-    std::vector<std::vector<HNSWNode*>> connections; 
-    
-
-    HNSWNode(const DataPoint& data_point, int max_level) :  data_point(data_point), max_level(max_level), connections(max_level + 1) {}
-
-    bool layer_in_bounds(int layer) {
-        return layer >= 0 && layer <= max_level;
-    }
-
-    void addConnection(HNSWNode* neighbor, uint64_t layer) {
-        if (layer_in_bounds(layer)) {
-            connections[layer].push_back(neighbor);
-        }
-
-    }
-
-};
-
-/// Manage the entire dataset: SIFT and GLOVE
-class DataSet {
     public:
-        std::string name;
-        std::vector<DataPoint> dataset;
 
-        DataSet(std::string name) : name(name) {}
+        DataPoint* data_point; // caution, this can mean multiple references to the same data point object. 
+        uint64_t max_connections;
+        uint64_t curr_level;
 
-        void addDataPoint(const DataPoint& data_point) {
-            dataset.push_back(data_point);
+        std::vector<HNSWNode*> neighbors;
+        HNSWNode* lower_node;
+
+        HNSWNode(DataPoint* point, uint64_t max_conn, uint64_t level) : data_point(point), max_connections(max_conn), curr_level(level){
+            lower_node = nullptr; //revist
+
         }
 
-        // void removeDataPoint(const DataPoint&) {
-            
-        // }
+        bool is_full() {
+            return neighbors.size() >= max_connections;
+        }
+
+
 };
 
 
@@ -93,13 +88,15 @@ class HNSW {
     
         HNSW(float m_l) : m_l(m_l) {}
 
-        float distance(const std::vector<float>& x,const std::vector<float>& y) {
+        float euclidean_distance(const std::vector<float>& x,const std::vector<float>& y) {
             UNUSED(x);
             UNUSED(y);
 
             float dist = 0.0f;
 
-            dist=std::sqrt(dist);
+
+
+
             return dist;
         }
 
@@ -117,40 +114,7 @@ class HNSW {
             UNUSED(ef_construction);
 
 
-            int l = getRandomLevel();
-            int L = max_level;
-            HNSWNode* ep = new HNSWNode(q,l);
-
-            // entry point has not yet been initialized
-            if (entry_point == nullptr) {
-                entry_point = ep;
-                max_level = l; 
-            } else {
-
-                for (int l_c = L; l_c >= l + 1; l_c--) {
-                    std::vector<HNSWNode*> W = search_layer(q,std::vector<HNSW*>(),1,l_c);
-                    ep = getNearest(W,q);
-                }
-                
-                for (int l_c = std::min(L,l); l_c >= 0; l_c --) {
-                    std::vector<HNSWNode*> W = search_layer(q,std::vector<HNSW*>(),ef_construction,l_c);
-                    std::vector<HNSWNode*> neighbors = select_neighbors_simple(q,W,m); // using the simple algorithm for now
-
-                    // add bidirectionall connectionts from neighbors to q at layer lc
-                    for (auto* neighbor: neighbors) {
-                        ep -> addConnection(neighbor,l);
-                        neighbor -> addConnection(ep,l);
-                    }
-
-                }
-
-                if (l > max_level ) {
-                    max_level = l;
-                    entry_point = ep;
-                }
-
-            }
-
+            
 
 
         }
@@ -167,27 +131,8 @@ class HNSW {
             UNUSED(ef);
             UNUSED(l_c);
 
-            using NodeDistPair = std::pair<float, HNSWNode*>;
-            auto compare = [](const NodeDistPair& a, const NodeDistPair& b) {return a.first > b.first;};
-            // usng decltype because we need comparision type to match lambda comparision
-            std::priority_queue<NodeDistPair, std::vector<NodeDistPair>, decltype(compare)> candidates(compare);
-
-            std::vector<HNSWNode*> W;
-            while(W.size() < ef && !candidates.empty()) {
-                auto [dis, node] = candidates.top();
-                candidates.pop();
-                W.push_back(node);
-
-                for (auto *neighbor :node-> connections[l_c]) {
-                    float candidate_dist = distance(q.vector_field, neighbor -> data_point.vector_field);
-                    if (W.size() < ef || candidate_dist < dis) {
-                        candidates.push({candidate_dist,neighbor});
-                    }
-                }
-            }
-
-            return W;
-
+            
+            return std::vector<HNSWNode*>();
         }
 
         /// ALGORITHM 3
@@ -199,16 +144,9 @@ class HNSW {
             UNUSED(C);
             UNUSED(M);
 
-            // sorting using lambda function, referred to code in slides
-            std::sort(C.begin(), C.end(), [&](HNSWNode* a, HNSWNode* b) {
+            return std::vector<HNSWNode*>();
 
-                return distance(q.vector_field, a->data_point.vector_field) < distance(q.vector_field, b->data_point.vector_field);
-
-            });
-
-            C.resize(M);
-
-            return C;
+            
         }
 
         /// ALGORITHM 4
