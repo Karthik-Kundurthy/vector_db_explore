@@ -23,6 +23,8 @@
 #include <random>
 #include <limits>
 #include <algorithm>
+#include <cassert>
+#include <cmath>
 #include "H5Cpp.h"
 
 
@@ -83,7 +85,7 @@ class HNSW {
     public:
 
         int max_level = 0; // initially at 0 bc no nodes in the graph yet
-        HNSWNode* entry_point = nullptr;
+        HNSWNode* ep = nullptr;
         float m_l; // normalization factor
     
         HNSW(float m_l) : m_l(m_l) {}
@@ -94,10 +96,19 @@ class HNSW {
 
             float dist = 0.0f;
 
+            assert((x.size() == y.size()) && "Error: x and y must be equal size");
+
+            for (size_t i = 0; i < x.size(); i++) {
+                dist += (x[i] - y[i]) * (x[i] - y[i]);
+            }
+
+            return std::sqrt(dist);
+        }
 
 
-
-            return dist;
+        // floor(-1 * ln(unif(0...1)) * m_l)
+        uint64_t getLevel() {
+            return std::floor(-1 * std::log(std::uniform_real_distribution<>(0.0, 1.0)) * m_l);
         }
 
         /// ALGORITHM 1
