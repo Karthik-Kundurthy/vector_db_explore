@@ -121,32 +121,121 @@ class HNSW {
         /// @param ef_construction: size of dynamic candidate list
         /// update the HNSW graph
         /// 
-        void insert(DataPoint q, uint64_t m, uint64_t m_max, size_t ef_construction) {
+        void insert(DataPoint* q, uint64_t m, uint64_t m_max, size_t ef_construction) {
             UNUSED(q);
             UNUSED(m);
             UNUSED(m_max);
             UNUSED(ef_construction);
 
+            // List for the currently found nearest elements
+            std::vector<HNSWNode*> W;
 
-            
+            int l = getLevel();
+            std::cout << "INSERTION LEVEL: " << l << std::endl;
 
+            // initialize case
+            if (ep == nullptr && L == 0) {
+                std::cout << "INITIALIZATION CASE" << std::endl;
+                ep = new HNSWNode(q, MAX_CONN, l);
+                L = l;
+            }
+
+
+            // when initialized, this should only execute once because L == l
+            for (int l_c = L; l_c >= l; l_c--) {
+                UNUSED(l_c);
+            }
+
+            // when initialized, this should only execute once because L == l
+            for (int l_c = std::min(L,l); l_c >= l; l_c--) {
+                UNUSED(l_c);
+            }
 
         }
 
         /// ALGORITHM 2
         /// @param q: the query vector
-        /// @param ep: enter points ep
+        /// @param ep: enter point ep
         /// @param ef: number of nearest to q elements to return
         /// @param l_c: layer number
         /// @return ef closest neighbors to q
-        std::vector<HNSWNode*> search_layer(DataPoint q, std::vector<HNSW*> ep, uint64_t ef, size_t l_c) {
+        std::vector<HNSWNode*> search_layer(DataPoint* q, int ef, uint64_t l_c) {
             UNUSED(q);
             UNUSED(ep);
             UNUSED(ef);
             UNUSED(l_c);
 
+
+            HNSWNode* curr_ep = ep;
+
+            while (curr_ep -> curr_level != l_c) {
+                curr_ep = curr_ep -> lower_node;
+            }
+
+
+            // set of visited elements - should I track
+            std::set<int> v;
+            v.insert(curr_ep -> data_point -> id);
+
+            // set of candidates that we have expanded
+            std::set<HNSWNode*> C;
+            C.insert(curr_ep);
             
-            return std::vector<HNSWNode*>();
+            // list of the nearest neighbors so far in our search
+            std::vector<HNSWNode*> W;
+            W.push_back(curr_ep);
+
+            while (C.size() > 0) {
+                int min_dist = INT_MAX;
+                int max_dist = INT_MIN;
+                HNSWNode *c = nullptr;
+                HNSWNode *f = nullptr;
+                for (HNSWNode* candidate: C) {
+                    if (euclidean_distance(candidate -> data_point -> vector,q->vector) < min_dist) {
+                        c = candidate;
+                    }
+
+                    if (euclidean_distance(candidate -> data_point -> vector,q->vector) > max_dist) {
+                        f = candidate;
+                    }
+                }
+
+                if (euclidean_distance(c -> data_point -> vector, q->vector) > euclidean_distance(f -> data_point -> vector, q->vector)) {
+                    break;
+                }
+
+                
+                for (HNSWNode* e : c -> neighbors) {
+
+                    // e element of v
+                    if (v.find(e->data_point->id) == v.end()) {
+                        v.insert(e -> data_point -> id);
+                    }
+
+
+                    // should create helper for getting the farthest value
+                    f = nullptr;
+                    max_dist = INT_MAX;
+                    for (HNSWNode* candidate: C) {
+                        if (euclidean_distance(candidate -> data_point -> vector,q->vector) > max_dist) {
+                            f = candidate;
+                        }
+                    }
+                    if ((euclidean_distance(e->data_point->vector,q->vector) < euclidean_distance(f->data_point->vector,q->vector)) || W.size() < static_cast<size_t>(ef)) {
+                        C.insert(e);
+                        W.push_back(e);
+                        if (W.size() > static_cast<size_t>(ef)) {
+                            // optmize remove by making W a map or set and pushing values to a vector at the end
+                            W.erase(std::remove(W.begin(), W.end(), f), W.end());
+                        }
+                    }
+
+                }
+
+
+            }
+
+            return W;
         }
 
         /// ALGORITHM 3
