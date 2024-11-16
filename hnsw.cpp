@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <climits>
 #include "H5Cpp.h"
 
 
@@ -84,9 +85,10 @@ struct HNSWNode {
 class HNSW {
     public:
 
-        int max_level = 0; // initially at 0 bc no nodes in the graph yet
+        int L = 0; // initially at 0 bc no nodes in the graph yet
         HNSWNode* ep = nullptr;
         float m_l; // normalization factor
+        uint64_t MAX_CONN = 5;
     
         HNSW(float m_l) : m_l(m_l) {}
 
@@ -108,7 +110,8 @@ class HNSW {
 
         // floor(-1 * ln(unif(0...1)) * m_l)
         uint64_t getLevel() {
-            return std::floor(-1 * std::log(std::uniform_real_distribution<>(0.0, 1.0)) * m_l);
+            std::mt19937 generator(std::random_device{}());
+            return std::floor(-1 * std::log((std::uniform_real_distribution<>(0.0, 1.0))(generator) * m_l));
         }
 
         /// ALGORITHM 1
