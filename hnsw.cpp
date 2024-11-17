@@ -195,7 +195,7 @@ class HNSW {
         /// @param ef: number of nearest to q elements to return
         /// @param l_c: layer number
         /// @return ef closest neighbors to q
-        std::vector<HNSWNode*> search_layer(DataPoint* q, int ef, uint64_t l_c) {
+        std::vector<HNSWNode*> search_layer(DataPoint* q, HNSWNode* ep, int ef, uint64_t l_c) {
             UNUSED(q);
             UNUSED(ep);
             UNUSED(ef);
@@ -261,7 +261,7 @@ class HNSW {
                         C.insert(e);
                         W.push_back(e);
                         if (W.size() > static_cast<size_t>(ef)) {
-                            // optmize remove by making W a map or set and pushing values to a vector at the end
+                            // optmize remove by making W a map or set or smthg and pushing values to a vector at the end
                             W.erase(std::remove(W.begin(), W.end(), f), W.end());
                         }
                     }
@@ -278,13 +278,32 @@ class HNSW {
         /// @param q: base element
         /// @param C:  candidate elements
         /// @param M: number of neighbors to return
-        std::vector<HNSWNode*> select_neighbors_simple(DataPoint q, std::vector<HNSWNode*> C, uint64_t M) {
+        std::vector<HNSWNode*> select_neighbors_simple(HNSWNode* q, std::vector<HNSWNode*> C, uint64_t M, int l_c) {
             UNUSED(q);
             UNUSED(C);
             UNUSED(M);
+            UNUSED(l_c);
 
-            return std::vector<HNSWNode*>();
 
+            auto comp = [](const std::pair<HNSWNode*, float>& a, const std::pair<HNSWNode*, float>& b) {
+                return a.second > b.second;
+            };
+
+
+            std::priority_queue<std::pair<HNSWNode*, float>, std::vector<std::pair<HNSWNode*, float>>, decltype(comp)> priority_queue(comp);
+
+            for (HNSWNode* node : C) {
+                priority_queue.push({node, euclidean_distance(node->data_point->vector,q->data_point->vector)});
+            }
+
+            std::vector<HNSWNode*> ret;
+
+            while (!priority_queue.empty()) {
+                ret.push_back(priority_queue.top().first);
+                priority_queue.pop();
+            }
+
+            return ret;
             
         }
 
