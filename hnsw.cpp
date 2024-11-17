@@ -334,28 +334,136 @@ class HNSW {
         /// @param ef: size of dynamic candidate list
         /// @return K nearest elements to query vector in the dynamic candidate list
         ///
-        std::vector<HNSWNode*> knn_search(DataPoint q, uint64_t k, uint64_t ef) {
+        std::vector<HNSWNode*> knn_search(DataPoint* q, uint64_t k, uint64_t ef) {
             UNUSED(q);
             UNUSED(k);
             UNUSED(ef);
 
-            return std::vector<HNSWNode*>();
+            std::vector<HNSWNode*> W;
+            
+
+            HNSWNode* ep = entry_point;
+
+            for (int l_c = L; l_c >= 1; l_c--) {
+                W = search_layer(q,ep,1,l_c);
+                ep=W[0];
+            }
+
+            // At entry point for the bottom most node, so just search that
+            W = search_layer(q,ep,ef,0);
+
+            auto comp = [](const std::pair<HNSWNode*, float>& a, const std::pair<HNSWNode*, float>& b) {
+                return a.second > b.second;
+            };
+            std::priority_queue<std::pair<HNSWNode*, float>, std::vector<std::pair<HNSWNode*, float>>, decltype(comp)> priority_queue(comp);
+
+            for (HNSWNode* node : W) {
+                priority_queue.push({node, euclidean_distance(node->data_point->vector,q->vector)});
+            }
+
+            std::vector<HNSWNode*> ret;
+
+            for (size_t i = 0; i < k; i++) {
+                ret.push_back(priority_queue.top().first);
+                priority_queue.pop();
+            }
+
+            return ret;
         }   
 
 
-        int getRandomLevel() {
-            return std::floor(-std::log((static_cast<float>(rand())) / RAND_MAX) / std::log(m_l));
-        }
-
-        HNSWNode* getNearest(std::vector<HNSWNode*> W, DataPoint q) {
-            UNUSED(W);
-            UNUSED(q);
-            return W[0];
-
-        }
-
         
 };
+
+void listDatasets(H5::H5File &file) {
+    std::string groupName = "/";
+    H5::Group group = file.openGroup(groupName);
+    hsize_t num_objects = group.getNumObjs();
+
+    std::cout << "Listing datasets and groups from the root" << std::endl;
+
+    for (hsize_t i = 0; i < num_objects; i++) {
+        std::string objName = group.getObjnameByIdx(i);
+        H5G_obj_t objType = group.getObjTypeByIdx(i);
+
+        if (objType == H5G_DATASET) {
+            std::cout <<"DATASET: " << objName << std::endl;
+        }
+    }
+
+}
+
+
+// Reference: Loading Hdf5 dataset into C++ vector - https://stackoverflow.com/questions/25568446/loading-data-from-hdf5-to-vector-in-c
+H5::DataSet loadDataset(std::string dataset_split = "train") {
+    // will set this parameter dynamically in future iterations
+    
+    std::string glove_file = "glove-25-angular.hdf5";
+
+    
+
+    // get the datset reference
+    H5::H5File file(glove_file, H5F_ACC_RDONLY);
+    H5::DataSet dataset = file.openDataSet(dataset_split);
+   
+
+    // Get the dataset size
+    H5::DataSpace dataspace = dataset.getSpace(); // dataspace objects just helps to do eqv of np.shape, explroing data
+    hsize_t dims[2];
+    int ndims = dataspace.getSimpleExtentDims(dims, NULL);
+    UNUSED(ndims);
+
+    // Get dataset size
+    std::cout << dataset_split << std::endl;
+    std::cout << "DATSET DIMENSIONS: " << dims[0] << " x " << dims[1] << std::endl;
+    std::cout << "___________________________________" << std::endl;
+
+
+    // rather than loading the entire dataset into the buffer in one go, we read a certain number of rows per chunk
+    hsize_t chunk_size = 1000;
+    hsize_t num_chunks = (dims[0] + chunk_size - 1) / chunk_size;
+
+    std::vector<float> single_chunk_buffer(chunk_size * dims[1]);
+
+
+    /// Dump chunk to CSV file
+    std::ofstream csvf(dataset_split + ".csv");
+
+    for (hsize_t i = 0; i < num_chunks; i++) {
+        hsize_t offset[2] = {i * chunk_size, 0};
+        hsize_t count[2] = {std::min(chunk_size, dims[0] - i * chunk_size), dims[1]};
+        dataspace.selectHyperslab(H5S_SELECT_SET, count, offset);
+
+        // Defining memory dataspace matches the size of the chunk
+        H5::DataSpace memspace(2, count);
+        dataset.read(single_chunk_buffer.data(), H5::PredType::NATIVE_FLOAT, memspace, dataspace);
+
+
+        
+
+
+        for (hsize_t r=0; r < count[0]; r++) {
+            for (hsize_t c=0; c < count[1]; c++) {
+                csvf << single_chunk_buffer[r * dims[1] + c];
+                if (c < count[1] - 1) {
+                    csvf <<",";
+                }
+            }
+            csvf << std::endl;
+        }
+
+    }
+
+
+    csvf.close();
+    file.close();
+
+    return dataset;
+}
+
+// defaults
+uint64_t default_k = 3;
+const uint64_t VALIDATION_SIZE = 10000;
 
 
 int main(int argc, char* argv[]) {
@@ -363,5 +471,13 @@ int main(int argc, char* argv[]) {
     UNUSED(argv);
 
     return 0;
+
+    std::string glove_file = "glove-25-angular.hdf5";
+    
+    // Listing the different datasets that could be used
+    H5::H5File root_explore(glove_file, H5F_ACC_RDONLY);
+    listDatasets(root_explore);
+    root_explore.close();
+    std::cout << "________________________________________" << std::endl;
 
 }
