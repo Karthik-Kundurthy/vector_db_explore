@@ -86,7 +86,7 @@ class HNSW {
     public:
 
         int L = 0; // initially at 0 bc no nodes in the graph yet
-        HNSWNode* ep = nullptr;
+        HNSWNode* entry_point = nullptr;
         float m_l; // normalization factor
         uint64_t MAX_CONN = 5;
     
@@ -134,22 +134,58 @@ class HNSW {
             std::cout << "INSERTION LEVEL: " << l << std::endl;
 
             // initialize case
-            if (ep == nullptr && L == 0) {
+            if (entry_point == nullptr && L == 0) {
                 std::cout << "INITIALIZATION CASE" << std::endl;
-                ep = new HNSWNode(q, MAX_CONN, l);
+                entry_point = new HNSWNode(q, MAX_CONN, l);
                 L = l;
             }
 
 
+            HNSWNode* ep = entry_point;
+            
+
             // when initialized, this should only execute once because L == l
             for (int l_c = L; l_c >= l; l_c--) {
-                UNUSED(l_c);
+                W = search_layer(q, ep, 1, l_c); // W has closest neighbor now
+                ep = W[0]; // ? right
             }
 
             // when initialized, this should only execute once because L == l
-            for (int l_c = std::min(L,l); l_c >= l; l_c--) {
-                UNUSED(l_c);
+            HNSWNode* parent = nullptr;
+            
+            UNUSED(parent);
+            bool extend_level_ep = false;
+            for (int l_c = std::min(L,l); l_c >= 0; l_c--) {
+                HNSWNode* new_node = new HNSWNode(q, m_max, l_c);
+
+                // ONE TIME THING, meant 
+                if (l > L && !extend_level_ep) {
+                    entry_point = new_node;
+                    extend_level_ep = true;
+                }
+                W = search_layer(q, ep, ef_construction, l_c);
+                std::vector<HNSWNode*> neighbors = select_neighbors_simple(new_node, W, m, l_c);
+                
+                UNUSED(new_node);
+                for (HNSWNode* node : neighbors) {
+                    UNUSED(node);
+                    ;
+                    node -> neighbors.push_back(new_node);
+                    new_node -> neighbors.push_back(node);
+
+                    if (node -> neighbors.size() > node -> max_connections) {
+                        std::vector<HNSWNode*> eNewConn = select_neighbors_simple(node, node->neighbors,node -> max_connections, l_c);
+                        for (HNSWNode* selected_neighbor : eNewConn) {
+                            selected_neighbor -> neighbors.push_back(node);
+                        }
+                        node -> neighbors = eNewConn;
+                    }
+                }
             }
+
+            
+            
+
 
         }
 
