@@ -2,6 +2,7 @@
 
 CS 6422 EC project
 
-- implementing HNSW from scratch
-- accelerating BuzzDB implementation
-- implementing Adaptive Radix trie
+- Implementing Hierarchial Navigable Small Worlds from scratch from https://arxiv.org/abs/1603.09320
+- Benchmark performance improvements over a brute force and exact matching approach
+
+
